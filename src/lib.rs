@@ -12,7 +12,7 @@
 //!
 //! All needed functions can be found in [Pattern]
 
-use std::fmt;
+use thiserror::Error;
 
 #[cfg(test)]
 mod tests;
@@ -22,25 +22,11 @@ const ALLOWED_ALPHABET: [char; 17] = [
     '?', // ? is used to indicate a placeholder
 ];
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum BinmatchError {
+    #[error("Invalid Character passed to binmatch::pattern::new [{0}]")]
     PatternParseError(char),
 }
-
-impl fmt::Display for BinmatchError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::PatternParseError(c) => {
-                write!(
-                    f,
-                    "Invalid Character passed to binmatch::pattern::new [{}]",
-                    c
-                )
-            }
-        }
-    }
-}
-impl std::error::Error for BinmatchError {}
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
 pub struct Pattern {
