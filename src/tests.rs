@@ -5,7 +5,7 @@ mod tests {
     #[test]
     fn test_pattern_chunk_matching() {
         let pattern = Pattern::new("00 ?? 00 ??").unwrap();
-        let matches = pattern.match_chunk(vec![0, 42, 0, 13]).unwrap();
+        let matches = pattern.match_chunk(vec![0, 42, 0, 13]);
         assert_eq!(matches, vec![42, 13])
     }
 
@@ -19,7 +19,7 @@ mod tests {
         for i in 0..100 {
             data.push(i);
         }
-        let matches = pattern.find_match(data).unwrap();
+        let matches = pattern.find_matches(data);
         assert_eq!(matches, vec![23]);
     }
 }
