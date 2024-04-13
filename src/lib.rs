@@ -26,6 +26,8 @@ const ALLOWED_ALPHABET: [char; 17] = [
 pub enum BinmatchError {
     #[error("Invalid Character passed to binmatch::pattern::new [{0}]")]
     PatternParseError(char),
+    #[error("Patterns should always be an even number of characters long")]
+    PatternLengthError,
 }
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
@@ -45,6 +47,7 @@ impl Pattern {
     /// Only use characters in the hexadecimal numbering system and question marks  
     /// Use ?? as a placeholder  
     /// Spaces are ignored  
+    /// The length of the input has to be even (Spaces do not count)  
     ///
     /// # Example:
     /// ```
@@ -53,6 +56,9 @@ impl Pattern {
     /// ```
     pub fn new(pattern: &str) -> Result<Pattern, Box<dyn std::error::Error>> {
         let string = pattern.replace(' ', "").to_uppercase();
+        if string.len() % 2 != 0 {
+            return Err(Box::new(BinmatchError::PatternLengthError));
+        }
         for char in string.chars() {
             if !ALLOWED_ALPHABET.contains(&char) {
                 return Err(Box::new(BinmatchError::PatternParseError(char)));
