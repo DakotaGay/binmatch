@@ -4,8 +4,8 @@
 //! Basic Usage looks like this:
 //! ```
 //! # use binmatch::Pattern;
-//! let pattern = Pattern::new("00 00 ??").unwrap();
-//! let data = vec![0x12, 0x13, 0x14, 0x00, 0x00, 0x42, 0x15];
+//! let pattern = Pattern::new("00 __ 00 ??").unwrap();
+//! let data = vec![0x12, 0x13, 0x00, 0x14, 0x00, 0x42, 0x15];
 //! let matches = pattern.find_matches(data); // Or Pattern::find_matches_with_index if you need the index
 //! assert_eq!(matches, vec![0x42]);
 //! ```
@@ -17,9 +17,10 @@ use thiserror::Error;
 #[cfg(test)]
 mod tests;
 
-const ALLOWED_ALPHABET: [char; 17] = [
+const ALLOWED_ALPHABET: [char; 18] = [
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
     '?', // ? is used to indicate a placeholder
+    '_', // _ is used to indicate a character to ignore
 ];
 
 #[derive(Error, Debug)]
@@ -40,19 +41,21 @@ pub struct Pattern {
 enum PatternElement {
     Literal(u8),
     Placeholder,
+    Ignore,
 }
 
 impl Pattern {
     /// Create a new `Pattern`  
     /// Only use characters in the hexadecimal numbering system and question marks  
     /// Use ?? as a placeholder  
+    /// Use __ to ignore something
     /// Spaces are ignored  
     /// The length of the input has to be even (Spaces do not count)  
     ///
     /// # Example:
     /// ```
     /// # use binmatch::Pattern;
-    /// let pattern = Pattern::new("00 00 ??").unwrap();
+    /// let pattern = Pattern::new("00 __ 00 ??").unwrap();
     /// ```
     pub fn new(pattern: &str) -> Result<Pattern, Box<dyn std::error::Error>> {
         let string = pattern.replace(' ', "").to_uppercase();
@@ -68,10 +71,10 @@ impl Pattern {
         let mut data: Vec<PatternElement> = vec![];
         for hex in string.chars().collect::<Vec<char>>().chunks(2) {
             let hex = String::from_utf8(hex.to_vec().iter().map(|&c| c as u8).collect())?;
-            if hex == "??" {
-                data.push(PatternElement::Placeholder);
-            } else {
-                data.push(PatternElement::Literal(u8::from_str_radix(&hex, 16)?))
+            match hex.as_str() {
+                "??" => data.push(PatternElement::Placeholder),
+                "__" => data.push(PatternElement::Ignore),
+                v => data.push(PatternElement::Literal(u8::from_str_radix(v, 16)?)),
             }
         }
         let len = data.len();
@@ -86,8 +89,8 @@ impl Pattern {
     /// # Example:
     /// ```
     /// # use binmatch::Pattern;
-    /// let pattern = Pattern::new("00 00 ??").unwrap();
-    /// let data = vec![0xFF, 0x12, 0x34, 0x00, 0x00, 0x42, 0x56, 0x78];
+    /// let pattern = Pattern::new("34 __ 00 ??").unwrap();
+    /// let data = vec![0xFF, 0x12, 0x34, 0x12, 0x00, 0x42, 0x56, 0x78];
     /// let matches = pattern.find_matches_with_index(data);
     /// assert_eq!(matches, vec![(0x42, 5)]);
     /// ```
@@ -109,8 +112,8 @@ impl Pattern {
     /// # Example:
     /// ```
     /// # use binmatch::Pattern;
-    /// let pattern = Pattern::new("00 00 ??").unwrap();
-    /// let data = vec![0xFF, 0x12, 0x34, 0x00, 0x00, 0x42, 0x56, 0x78];
+    /// let pattern = Pattern::new("00 __ 00 ??").unwrap();
+    /// let data = vec![0xFF, 0x12, 0x34, 0x00, 0x32, 0x00, 0x42, 0x56, 0x78];
     /// let matches = pattern.find_matches(data);
     /// assert_eq!(matches, vec![0x42]);
     /// ```
@@ -130,15 +133,15 @@ impl Pattern {
     /// # Examples:
     /// ```
     /// # use binmatch::Pattern;
-    /// let pattern = Pattern::new("00 00 ??").unwrap();
-    /// let matches = pattern.match_chunk(vec![0x00, 0x00, 0x42]);
-    /// assert_eq!(matches, vec![(0x42, 2)]);
+    /// let pattern = Pattern::new("00 __ 00 ??").unwrap();
+    /// let matches = pattern.match_chunk(vec![0x00, 0x32 ,0x00, 0x42]);
+    /// assert_eq!(matches, vec![(0x42, 3)]);
     /// ```
     ///
     /// ```should_panic
     /// # use binmatch::Pattern;
-    /// let pattern = Pattern::new("00 00 ??").unwrap();
-    /// let matches = pattern.match_chunk(vec![0x00, 0x00, 0x42, 0x00]);
+    /// let pattern = Pattern::new("00 __ 00 ??").unwrap();
+    /// let matches = pattern.match_chunk(vec![0x00, 0x32, 0x42, 0x00, 0x00]);
     /// unreachable!();
     /// ```
     pub fn match_chunk(&self, chunk: Vec<u8>) -> Vec<(u8, usize)> {
@@ -152,6 +155,7 @@ impl Pattern {
                     }
                 }
                 PatternElement::Placeholder => matches.push((*actual, index)),
+                PatternElement::Ignore => (),
             }
         }
         matches

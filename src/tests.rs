@@ -22,7 +22,7 @@ fn test_pattern_whole_matching() {
 }
 
 #[test]
-fn test_convinience_method() {
+fn test_convenience_method() {
     let pattern = Pattern::new("DEADBEEF ??").unwrap();
     let mut data: Vec<u8> = vec![0xDE, 0xAD, 0xBE, 0xEF, 23];
     for i in 0..100 {
@@ -31,6 +31,14 @@ fn test_convinience_method() {
     for i in 0..100 {
         data.push(i);
     }
+    let matches = pattern.find_matches(data);
+    assert_eq!(matches, vec![23]);
+}
+
+#[test]
+fn ignore_some_bytes() {
+    let pattern = Pattern::new("00 __ 12 __ ??").unwrap();
+    let data: Vec<u8> = vec![0x00, 0xFF, 0x12, 0xAA, 23];
     let matches = pattern.find_matches(data);
     assert_eq!(matches, vec![23]);
 }
