@@ -65,7 +65,7 @@ impl Pattern {
     /// let pattern = Pattern::new("00 00 ??").unwrap();
     /// ```
     pub fn new(pattern: &str) -> Result<Pattern, Box<dyn std::error::Error>> {
-        let string = pattern.replace(" ", "").to_uppercase();
+        let string = pattern.replace(' ', "").to_uppercase();
         for char in string.chars() {
             if !ALLOWED_ALPHABET.contains(&char) {
                 return Err(Box::new(BinmatchError::PatternParseError(char)));
@@ -83,10 +83,7 @@ impl Pattern {
         }
         let len = data.len();
 
-        Ok(Self {
-            data: data,
-            len: len,
-        })
+        Ok(Self { data, len })
     }
 
     /// Finds all matches in the `haystack`
