@@ -2,7 +2,13 @@
 name = "binmatch"
 version = "0.1.0"
 edition = "2021"
-authors = [""]
+authors = ["DakotaGay <DakotaGay@disroot.org>"]
+license = "GNU AGPLv3"
+description = "A simple binary pattern matching crate"
+repository = "https://github.com/ThatOneEnby1337/binmatch"
+readme = "README.md"
+keywords = ["pattern-matching", "binary-data"]
+categories = ["encoding"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
