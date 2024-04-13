@@ -48,7 +48,7 @@ impl Pattern {
     /// Create a new `Pattern`  
     /// Only use characters in the hexadecimal numbering system and question marks  
     /// Use ?? as a placeholder  
-    /// Use __ to ignore something
+    /// Use __ to ignore something  
     /// Spaces are ignored  
     /// The length of the input has to be even (Spaces do not count)  
     ///
