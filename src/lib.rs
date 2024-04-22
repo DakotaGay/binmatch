@@ -11,18 +11,29 @@
 //! ```
 //!
 //! All needed functions can be found in [Pattern]
+//!
+//! # Usage with `#![no_std]`
+//! First off, disable the default feature `std`  
+//! `cargo add binmatch --no-default-features`  
+//! The normal [Pattern::new] is no longer accesible, because it needs `std` to function  
+//! Every time you wish to create a new [Pattern] you now have to use [Pattern::new_unchecked]  
+//!
 
+#[cfg(not(feature = "std"))]
+include!("no_std_include.rs");
+#[cfg(feature = "std")]
 use thiserror::Error;
 
 #[cfg(test)]
 mod tests;
 
-const ALLOWED_ALPHABET: [char; 18] = [
+pub const ALLOWED_ALPHABET: [char; 18] = [
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
     '?', // ? is used to indicate a placeholder
     '_', // _ is used to indicate a character to ignore
 ];
 
+#[cfg(feature = "std")]
 #[derive(Error, Debug)]
 pub enum BinmatchError {
     #[error("Invalid Character passed to binmatch::pattern::new [{0}]")]
@@ -45,18 +56,22 @@ enum PatternElement {
 }
 
 impl Pattern {
+    /// <div class="warning"> Only available using the <code>std</code> feature </div>
+    ///
     /// Create a new `Pattern`  
-    /// Only use characters in the hexadecimal numbering system and question marks  
-    /// Use ?? as a placeholder  
-    /// Use __ to ignore something  
-    /// Spaces are ignored  
-    /// The length of the input has to be even (Spaces do not count)  
+    ///
+    ///
+    /// # Returns an Error when:
+    ///
+    /// - The input `&str` contains Characters not contained in `ALLOWED_ALPHABET`
+    /// - The inputs length is not divisible by 2
     ///
     /// # Example:
     /// ```
     /// # use binmatch::Pattern;
     /// let pattern = Pattern::new("00 __ 00 ??").unwrap();
     /// ```
+    #[cfg(feature = "std")]
     pub fn new(pattern: &str) -> Result<Pattern, Box<dyn std::error::Error>> {
         let string = pattern.replace(' ', "").to_uppercase();
         if string.len() % 2 != 0 {
@@ -68,7 +83,7 @@ impl Pattern {
             }
         }
 
-        let mut data: Vec<PatternElement> = vec![];
+        let mut data: Vec<PatternElement> = Vec::new();
         for hex in string.chars().collect::<Vec<char>>().chunks(2) {
             let hex = String::from_utf8(hex.to_vec().iter().map(|&c| c as u8).collect())?;
             match hex.as_str() {
@@ -80,6 +95,41 @@ impl Pattern {
         let len = data.len();
 
         Ok(Self { data, len })
+    }
+
+    /// Create a new `Pattern`  
+    ///
+    /// # Panics when:
+    /// - The input `&str` contains Characters not contained in `ALLOWED_ALPHABET`
+    /// - The inputs length is not divisible by 2
+    ///
+    /// # Example:
+    /// ```
+    /// # use binmatch::Pattern;
+    /// let pattern = Pattern::new_unchecked("00 __ 00 ??");
+    /// ```
+    pub fn new_unchecked(pattern: &str) -> Pattern {
+        let string = pattern.replace(' ', "").to_uppercase();
+        assert!(string.len() % 2 == 0);
+        for char in string.chars() {
+            assert!(ALLOWED_ALPHABET.contains(&char));
+        }
+
+        let mut data: Vec<PatternElement> = Vec::new();
+        for hex in string.chars().collect::<Vec<char>>().chunks(2) {
+            let hex = String::from_utf8(hex.to_vec().iter().map(|&c| c as u8).collect())
+                .expect("Could not parse a chunk to a String");
+            match hex.as_str() {
+                "??" => data.push(PatternElement::Placeholder),
+                "__" => data.push(PatternElement::Ignore),
+                v => data.push(PatternElement::Literal(
+                    u8::from_str_radix(v, 16).expect("Could not parse the string to a u8"),
+                )), // It shouldn't be possible to panic from this line
+            }
+        }
+        let len = data.len();
+
+        Self { data, len }
     }
 
     /// Finds all matches in the `haystack`
@@ -95,7 +145,7 @@ impl Pattern {
     /// assert_eq!(matches, vec![(0x42, 5)]);
     /// ```
     pub fn find_matches_with_index(&self, haystack: Vec<u8>) -> Vec<(u8, usize)> {
-        let mut matches = vec![];
+        let mut matches = Vec::new();
         for (i, sub) in haystack.windows(self.len).enumerate() {
             matches.extend(
                 self.match_chunk(sub.to_vec())
@@ -146,12 +196,12 @@ impl Pattern {
     /// ```
     pub fn match_chunk(&self, chunk: Vec<u8>) -> Vec<(u8, usize)> {
         assert_eq!(self.len, chunk.len());
-        let mut matches = vec![];
+        let mut matches = Vec::new();
         for (index, (actual, expected)) in chunk.iter().zip(self.data.clone()).enumerate() {
             match expected {
                 PatternElement::Literal(expected) => {
                     if expected != *actual {
-                        return vec![]; // Discard all matches
+                        return Vec::new(); // Discard all matches
                     }
                 }
                 PatternElement::Placeholder => matches.push((*actual, index)),
