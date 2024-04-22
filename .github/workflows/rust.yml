@@ -23,4 +23,4 @@ jobs:
     - name: Run tests
       run: cargo test --verbose
     - name: Run no_std tests
-      run: cargo test --verbose --no-default-features
+      run: cargo test --verbose --no-default-features --lib --tests # Don't run the Doctests
