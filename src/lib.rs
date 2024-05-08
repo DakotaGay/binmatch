@@ -149,6 +149,7 @@ impl Pattern {
         for (i, sub) in haystack.windows(self.len).enumerate() {
             matches.extend(
                 self.match_chunk(sub.to_vec())
+                    .0
                     .iter()
                     .map(|m| (m.0, m.1 + i))
                     .collect::<Vec<(u8, usize)>>(),
@@ -172,6 +173,24 @@ impl Pattern {
         matches.iter().map(|(matched, _)| *matched).collect()
     }
 
+    /// Convenience Method for cases where the values are irrelevant and you only need to know if the Pattern matches the data
+    ///
+    /// # Example:
+    /// ```
+    /// # use binmatch::Pattern;
+    /// let pattern = Pattern::new("00 __ 00 __").unwrap();
+    /// let data = vec![0xFF, 0x12, 0x34, 0x00, 0x32, 0x00, 0x42, 0x56, 0x78];
+    /// assert_eq!(pattern.has_match(data), true);
+    /// ```
+    pub fn has_match(&self, haystack: Vec<u8>) -> bool {
+        for sub in haystack.windows(self.len) {
+            if self.match_chunk(sub.to_vec()).1 {
+                return true;
+            }
+        }
+        false
+    }
+
     /// Finds a match in a chunk  
     /// Called by [Pattern::find_matches]  
     /// You normally don't need to use this
@@ -184,37 +203,39 @@ impl Pattern {
     /// ```
     /// # use binmatch::Pattern;
     /// let pattern = Pattern::new("00 __ 00 ??").unwrap();
-    /// let matches = pattern.match_chunk(vec![0x00, 0x32 ,0x00, 0x42]);
+    /// let (matches, _) = pattern.match_chunk(vec![0x00, 0x32 ,0x00, 0x42]);
     /// assert_eq!(matches, vec![(0x42, 3)]);
     /// ```
     ///
     /// ```should_panic
     /// # use binmatch::Pattern;
     /// let pattern = Pattern::new("00 __ 00 ??").unwrap();
-    /// let matches = pattern.match_chunk(vec![0x00, 0x32, 0x42, 0x00, 0x00]);
+    /// let (matches, _) = pattern.match_chunk(vec![0x00, 0x32, 0x42, 0x00, 0x00]);
     /// unreachable!();
     /// ```
-    pub fn match_chunk(&self, chunk: Vec<u8>) -> Vec<(u8, usize)> {
+    pub fn match_chunk(&self, chunk: Vec<u8>) -> (Vec<(u8, usize)>, bool) {
         assert_eq!(self.len, chunk.len());
         let mut matches = Vec::new();
         for (index, (actual, expected)) in chunk.iter().zip(self.data.clone()).enumerate() {
             match expected {
                 PatternElement::Literal(expected) => {
                     if expected != *actual {
-                        return Vec::new(); // Discard all matches
+                        return (Vec::new(), false); // Discard all matches
                     }
                 }
                 PatternElement::Placeholder => matches.push((*actual, index)),
                 PatternElement::Ignore => (),
             }
         }
-        matches
+        (matches, true)
     }
 
+    #[inline(always)]
     pub fn len(&self) -> usize {
         self.len
     }
 
+    #[inline(always)]
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }

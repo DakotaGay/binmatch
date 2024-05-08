@@ -5,7 +5,7 @@ mod std_tests {
     #[test]
     fn test_pattern_chunk_matching() {
         let pattern = Pattern::new("00 ?? 00 ??").unwrap();
-        let matches = pattern.match_chunk(vec![0, 42, 0, 13]);
+        let (matches, _) = pattern.match_chunk(vec![0, 42, 0, 13]);
         assert_eq!(matches, vec![(42, 1), (13, 3)])
     }
 
@@ -54,7 +54,7 @@ mod no_std_tests {
     #[test]
     fn test_pattern_chunk_matching() {
         let pattern = Pattern::new_unchecked("00 ?? 00 ??");
-        let matches = pattern.match_chunk([0, 42, 0, 13].to_vec());
+        let (matches, _) = pattern.match_chunk([0, 42, 0, 13].to_vec());
         assert_eq!(matches, [(42, 1), (13, 3)].to_vec())
     }
 
